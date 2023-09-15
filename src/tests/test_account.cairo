@@ -36,7 +36,7 @@ fn test_deploy() {
 
 #[test]
 #[available_gas(2000000000)]
-#[should_panic(expected: ('ALREADY_INITIALIZED','ENTRYPOINT_FAILED',))]
+#[should_panic(expected: ('ALREADY_INITIALIZED', 'ENTRYPOINT_FAILED',))]
 fn test_initialize_twice() {
     let public_key: felt252 = 'test';
     let contract = deploy(public_key);
