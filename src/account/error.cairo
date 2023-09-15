@@ -1,0 +1,5 @@
+mod AccountError {
+    const ALREADY_INITIALIZED: felt252 = 'ALREADY_INITIALIZED';
+    const INVALID_CALLER: felt252 = 'INVALID_CALLER';
+    const INVALID_SIGNATURE: felt252 = 'INVALID_SIGNATURE';
+}
