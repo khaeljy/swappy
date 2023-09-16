@@ -28,9 +28,13 @@ fn deploy(public_key: felt252) -> IAccountDispatcher {
 #[test]
 #[available_gas(2000000000)]
 fn test_deploy() {
+    // Given
     let public_key: felt252 = 'test';
+
+    // When
     let contract = deploy(public_key);
 
+    // Then
     assert(contract.get_public_key() == public_key, 'wrong public key');
 }
 
@@ -38,7 +42,10 @@ fn test_deploy() {
 #[available_gas(2000000000)]
 #[should_panic(expected: ('ALREADY_INITIALIZED', 'ENTRYPOINT_FAILED',))]
 fn test_initialize_twice() {
+    // Given
     let public_key: felt252 = 'test';
     let contract = deploy(public_key);
+
+    // When
     contract.initialize(public_key);
 }
