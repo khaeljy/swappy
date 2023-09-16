@@ -51,7 +51,7 @@ mod JediSwapRouter {
             self.owner.read()
         }
 
-        fn transfer_ownership(ref self: ContractState, new_owner: ContractAddress){
+        fn transfer_ownership(ref self: ContractState, new_owner: ContractAddress) {
             self.only_owner();
             self.owner.write(new_owner);
         }
