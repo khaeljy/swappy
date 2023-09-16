@@ -1,7 +1,7 @@
 <div align="center">
 <br />
 
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/khaeljy/swappy/test.yml)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/khaeljy/swappy/test.yml?style=flat-square)
 ![GitHub](https://img.shields.io/github/license/khaeljy/swappy?style=flat-square&logo=github)
 ![GitHub contributors](https://img.shields.io/github/contributors/khaeljy/swappy?logo=github&style=flat-square)
 ![GitHub top language](https://img.shields.io/github/languages/top/khaeljy/swappy?style=flat-square)
