@@ -12,7 +12,7 @@
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh && curl https://get.starkli.sh | sh && ~/.starkli/bin/starkliup",
+	"postCreateCommand": "chmod +x .devcontainer/postCreateCommand.sh && .devcontainer/postCreateCommand.sh",
 
 	// Configure tool-specific properties.
 	"customizations": {

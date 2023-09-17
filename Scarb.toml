@@ -11,3 +11,5 @@ starknet = ">=2.2.0"
 
 [scripts]
 test = "scarb fmt && scarb cairo-test"
+katana = "katana"
+katana-fork = "/bin/bash scripts/katana_fork.sh"
