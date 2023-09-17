@@ -69,9 +69,9 @@ mod JediSwapRouter {
             ref self: ContractState,
             amount_in: u256,
             amount_out_min: u256,
-            path: Span<felt252>,
-            to: felt252,
-            deadline: felt252
+            path: Span<ContractAddress>,
+            to: ContractAddress,
+            deadline: u32
         ) {
             self
                 .swap_exact_tokens_for_tokens_internal(
@@ -93,13 +93,15 @@ mod JediSwapRouter {
             ref self: ContractState,
             amount_in: u256,
             amount_out_min: u256,
-            path: Span<felt252>,
-            to: felt252,
-            deadline: felt252
+            path: Span<ContractAddress>,
+            to: ContractAddress,
+            deadline: u32
         ) {
             let router_address = self.router_address.read();
             assert(router_address.is_non_zero(), RouterError::ROUTER_ADDRESS_UNDEFINED);
-        // TODO : Call router address swap_exact_tokens_for_tokens_internal
+
+            // TODO : Call router address swap_exact_tokens_for_tokens
+            panic_with_felt252('NOT_IMPLEMENTED');
         }
     }
 }

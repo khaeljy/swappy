@@ -52,8 +52,8 @@ trait IRouter<TContractState> {
         ref self: TContractState,
         amount_in: u256,
         amount_out_min: u256,
-        path: Span<felt252>,
-        to: felt252,
-        deadline: felt252
+        path: Span<ContractAddress>,
+        to: ContractAddress,
+        deadline: u32
     );
 }

@@ -91,3 +91,44 @@ fn test_set_router_address_by_non_owner_should_fail() {
     // When
     contract.set_router_address(router_address);
 }
+
+#[test]
+#[available_gas(2000000000)]
+fn test_transfert_ownership() {
+    // Given
+    let owner = contract_address_const::<12345>();
+    let contract = deploy(owner);
+    set_contract_address(owner);
+
+    // When
+    let new_owner = contract_address_const::<99999>();
+    contract.transfer_ownership(new_owner);
+
+    // Then
+    assert(contract.get_owner() == new_owner, 'transfert_ownership failed');
+}
+
+#[test]
+#[available_gas(2000000000)]
+#[should_panic(expected: ('NOT_IMPLEMENTED', 'ENTRYPOINT_FAILED',))]
+fn test_swap_exact_tokens_for_tokens() {
+    // Given
+    let owner = contract_address_const::<12345>();
+    let contract = deploy(owner);
+    set_contract_address(owner);
+
+    let router_address =
+        contract_address_const::<0x02bcc885342ebbcbcd170ae6cafa8a4bed22bb993479f49806e72d96af94c965>();
+    contract.set_router_address(router_address);
+
+    // When
+    contract
+        .swap_exact_tokens_for_tokens(
+            amount_in: 1,
+            amount_out_min: 1,
+            path: array![contract_address_const::<11111>(), contract_address_const::<22222>()]
+                .span(),
+            to: owner,
+            deadline: 1
+        );
+}

@@ -9,10 +9,11 @@ use starknet::ContractAddress;
 //                              STRUCTS / CONST
 // *************************************************************************
 
-/// @title Represents a call to a target contract
-/// @param to The target contract address
-/// @param selector The target function selector
-/// @param calldata The serialized function parameters
+/// Represents a call to a target contract
+///
+/// `to` - The target contract address
+/// `selector` - The target function selector
+/// `calldata` - The serialized function parameters
 #[derive(Drop, Serde)]
 struct Call {
     to: ContractAddress,
