@@ -8,8 +8,6 @@ mod JediSwapRouter {
     use core::zeroable::Zeroable;
     use starknet::{get_caller_address, ContractAddress};
 
-    use debug::PrintTrait;
-
     // Local imports.
     use swappy::router::router::IRouter;
     use swappy::router::error::RouterError;
@@ -101,6 +99,7 @@ mod JediSwapRouter {
             assert(router_address.is_non_zero(), RouterError::ROUTER_ADDRESS_UNDEFINED);
 
             // TODO : Call router address swap_exact_tokens_for_tokens
+            // Until JediSwap is updated to Cairo 1, panic with 'NOT_IMPLEMENTED'
             panic_with_felt252('NOT_IMPLEMENTED');
         }
     }
