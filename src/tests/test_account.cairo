@@ -1,15 +1,10 @@
-// *************************************************************************
-//                                  IMPORTS
-// *************************************************************************
-
-// Core lib imports.
 use starknet::deploy_syscall;
+use openzeppelin::account::{AccountABIDispatcher, AccountABIDispatcherTrait};
 
-// Local imports.
-use swappy::account::account::{Account, IAccountDispatcher, IAccountDispatcherTrait};
+use swappy::account::account::Account;
 
 // Deploy the contract and return its dispatcher.
-fn deploy(public_key: felt252) -> IAccountDispatcher {
+fn deploy(public_key: felt252) -> AccountABIDispatcher {
     // Set up constructor arguments.
     let mut calldata = ArrayTrait::new();
     public_key.serialize(ref calldata);
@@ -22,7 +17,7 @@ fn deploy(public_key: felt252) -> IAccountDispatcher {
 
     // Return the dispatcher.
     // The dispatcher allows to interact with the contract based on its interface.
-    IAccountDispatcher { contract_address }
+    AccountABIDispatcher { contract_address }
 }
 
 #[test]
@@ -36,16 +31,4 @@ fn test_deploy() {
 
     // Then
     assert(contract.get_public_key() == public_key, 'wrong public key');
-}
-
-#[test]
-#[available_gas(2000000000)]
-#[should_panic(expected: ('ALREADY_INITIALIZED', 'ENTRYPOINT_FAILED',))]
-fn test_initialize_twice() {
-    // Given
-    let public_key: felt252 = 'test';
-    let contract = deploy(public_key);
-
-    // When
-    contract.initialize(public_key);
 }

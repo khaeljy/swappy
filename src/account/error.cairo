@@ -1,5 +1,6 @@
 mod AccountError {
-    const ALREADY_INITIALIZED: felt252 = 'ALREADY_INITIALIZED';
-    const INVALID_CALLER: felt252 = 'INVALID_CALLER';
-    const INVALID_SIGNATURE: felt252 = 'INVALID_SIGNATURE';
+    const INVALID_CALLER: felt252 = 'Account: invalid caller';
+    const INVALID_TX_VERSION: felt252 = 'Account: invalid tx version';
+    const INVALID_SIGNATURE: felt252 = 'Account: invalid signature';
+    const UNAUTHORIZED: felt252 = 'Account: unauthorized';
 }

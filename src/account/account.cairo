@@ -1,212 +1,244 @@
-// *************************************************************************
-//                                  IMPORTS
-// *************************************************************************
-
-// Core lib imports.
+use array::ArrayTrait;
+use array::SpanTrait;
+use option::OptionTrait;
+use serde::Serde;
 use starknet::ContractAddress;
+use starknet::account::Call;
 
-// *************************************************************************
-//                              STRUCTS / CONST
-// *************************************************************************
+const TRANSACTION_VERSION: felt252 = 1;
 
-/// Represents a call to a target contract
-///
-/// `to` - The target contract address
-/// `selector` - The target function selector
-/// `calldata` - The serialized function parameters
-#[derive(Drop, Serde)]
-struct Call {
-    to: ContractAddress,
-    selector: felt252,
-    calldata: Array<felt252>
+// 2**128 + TRANSACTION_VERSION
+const QUERY_VERSION: felt252 = 340282366920938463463374607431768211457;
+
+trait PublicKeyTrait<TState> {
+    fn set_public_key(ref self: TState, new_public_key: felt252);
+    fn get_public_key(self: @TState) -> felt252;
 }
 
-// hash of SNIP-6 trait
-const SRC6_TRAIT_ID: felt252 =
-    1270010605630597976495846281167968799381097569185364931397797212080166453709;
-
-// *************************************************************************
-//                  Interfaces of the `Account` contract.
-// *************************************************************************
-#[starknet::interface]
-trait IAccount<TContractState> {
-    /// Initialize the contract
-    ///
-    /// # Arguments
-    ///
-    /// * `public_key` - The public key allowed to interact with the account
-    fn initialize(ref self: TContractState, public_key: felt252);
-
-    /// Execute a transaction through the account
-    ///
-    /// # Arguments
-    ///
-    /// * `calls` - The list of calls to execute
-    /// @return The list of each call's serialized return value
-    fn __execute__(ref self: TContractState, calls: Array<Call>) -> Array<Span<felt252>>;
-
-    /// Assert whether the transaction is valid to be executed
-    ///
-    /// # Arguments
-    ///
-    /// * `calls` - The list of calls to validate
-    /// @return The string 'VALID' represented as felt when is valid
-    fn __validate__(ref self: TContractState, calls: Array<Call>) -> felt252;
-
-    /// Assert whether a given signature for a given hash is valid
-    ///
-    /// # Arguments
-    ///
-    /// * `hash` - The hash of the data
-    /// * `signature` - The signature to validate
-    /// @return The string 'VALID' represented as felt when the signature is valid
-    fn is_valid_signature(
-        ref self: TContractState, hash: felt252, signature: Array<felt252>
-    ) -> felt252;
-
-    /// Query if a contract implements an interface
-    ///
-    /// # Arguments
-    ///
-    /// * `interface_id` - The interface identifier, as specified in SRC-5
-    /// @return `true` if the contract implements `interface_id`, `false` otherwise
-    fn supports_interface(ref self: TContractState, interface_id: felt252) -> bool;
-
-    /// Get the public key
-    /// @return The public key
-    fn get_public_key(ref self: TContractState) -> felt252;
+trait PublicKeyCamelTrait<TState> {
+    fn setPublicKey(ref self: TState, newPublicKey: felt252);
+    fn getPublicKey(self: @TState) -> felt252;
 }
 
 #[starknet::contract]
 mod Account {
-    // *************************************************************************
-    //                               IMPORTS
-    // *************************************************************************
-
-    // Core lib imports.
+    use array::ArrayTrait;
+    use array::SpanTrait;
+    use box::BoxTrait;
     use ecdsa::check_ecdsa_signature;
-    use starknet::{get_caller_address, call_contract_syscall, get_tx_info, VALIDATED};
 
-    // Local imports.
+    use openzeppelin::account::interface;
+    use openzeppelin::introspection::interface::ISRC5;
+    use openzeppelin::introspection::interface::ISRC5Camel;
+    use openzeppelin::introspection::src5::SRC5;
+    use option::OptionTrait;
+    use starknet::get_caller_address;
+    use starknet::get_contract_address;
+    use starknet::get_tx_info;
+
     use super::Call;
+    use super::QUERY_VERSION;
+    use super::TRANSACTION_VERSION;
+    use zeroable::Zeroable;
+
     use swappy::account::error::AccountError;
 
-    // *************************************************************************
-    //                              STORAGE
-    // *************************************************************************
     #[storage]
     struct Storage {
         public_key: felt252
     }
 
-    // *************************************************************************
-    //                              CONSTRUCTOR
-    // *************************************************************************
-
-    /// Constructor of the contract.
-    /// # Arguments
-    /// * `public_key` - The public key allowed to interact with the account.
-    #[constructor]
-    fn constructor(ref self: ContractState, public_key: felt252) {
-        self.initialize(public_key);
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        OwnerAdded: OwnerAdded,
+        OwnerRemoved: OwnerRemoved,
     }
 
-    // *************************************************************************
-    //                          EXTERNAL FUNCTIONS
-    // *************************************************************************
+    #[derive(Drop, starknet::Event)]
+    struct OwnerAdded {
+        new_owner_guid: felt252
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct OwnerRemoved {
+        removed_owner_guid: felt252
+    }
+
+    #[constructor]
+    fn constructor(ref self: ContractState, _public_key: felt252) {
+        self.initializer(_public_key);
+    }
+
+    //
+    // External
+    //
+
     #[external(v0)]
-    impl AccountImpl of super::IAccount<ContractState> {
-        fn initialize(ref self: ContractState, public_key: felt252) {
-            // Make sure the contract is not already initialized.
-            assert(self.public_key.read().is_zero(), AccountError::ALREADY_INITIALIZED);
+    impl SRC6Impl of interface::ISRC6<ContractState> {
+        fn __execute__(self: @ContractState, mut calls: Array<Call>) -> Array<Span<felt252>> {
+            // Avoid calls from other contracts
+            let sender = get_caller_address();
+            assert(sender.is_zero(), AccountError::INVALID_CALLER);
 
-            self.public_key.write(public_key);
+            // Check tx version
+            let tx_info = get_tx_info().unbox();
+            let version = tx_info.version;
+            if version != TRANSACTION_VERSION {
+                assert(version == QUERY_VERSION, AccountError::INVALID_TX_VERSION);
+            }
+
+            _execute_calls(calls)
         }
 
-        fn __execute__(ref self: ContractState, calls: Array<Call>) -> Array<Span<felt252>> {
-            self.only_protocol();
-            self.execute_multiple_calls(calls)
-        }
-
-        fn __validate__(ref self: ContractState, calls: Array<Call>) -> felt252 {
-            self.only_protocol();
+        fn __validate__(self: @ContractState, mut calls: Array<Call>) -> felt252 {
             self.validate_transaction()
         }
 
         fn is_valid_signature(
-            ref self: ContractState, hash: felt252, signature: Array<felt252>
+            self: @ContractState, hash: felt252, signature: Array<felt252>
         ) -> felt252 {
-            if self.is_valid_signature_internal(hash, signature.span()) {
-                VALIDATED
+            if self._is_valid_signature(hash, signature.span()) {
+                starknet::VALIDATED
             } else {
                 0
             }
         }
+    }
 
-        fn supports_interface(ref self: ContractState, interface_id: felt252) -> bool {
-            interface_id == super::SRC6_TRAIT_ID
-        }
-
-        fn get_public_key(ref self: ContractState) -> felt252 {
-            self.public_key.read()
+    #[external(v0)]
+    impl SRC6CamelOnlyImpl of interface::ISRC6CamelOnly<ContractState> {
+        fn isValidSignature(
+            self: @ContractState, hash: felt252, signature: Array<felt252>
+        ) -> felt252 {
+            SRC6Impl::is_valid_signature(self, hash, signature)
         }
     }
 
+    #[external(v0)]
+    impl DeclarerImpl of interface::IDeclarer<ContractState> {
+        fn __validate_declare__(self: @ContractState, class_hash: felt252) -> felt252 {
+            self.validate_transaction()
+        }
+    }
+
+    #[external(v0)]
+    impl SRC5Impl of ISRC5<ContractState> {
+        fn supports_interface(self: @ContractState, interface_id: felt252) -> bool {
+            let unsafe_state = SRC5::unsafe_new_contract_state();
+            SRC5::SRC5Impl::supports_interface(@unsafe_state, interface_id)
+        }
+    }
+
+    #[external(v0)]
+    impl SRC5CamelImpl of ISRC5Camel<ContractState> {
+        fn supportsInterface(self: @ContractState, interfaceId: felt252) -> bool {
+            let unsafe_state = SRC5::unsafe_new_contract_state();
+            SRC5::SRC5CamelImpl::supportsInterface(@unsafe_state, interfaceId)
+        }
+    }
+
+    #[external(v0)]
+    impl PublicKeyImpl of super::PublicKeyTrait<ContractState> {
+        fn get_public_key(self: @ContractState) -> felt252 {
+            self.public_key.read()
+        }
+
+        fn set_public_key(ref self: ContractState, new_public_key: felt252) {
+            assert_only_self();
+            self.emit(OwnerRemoved { removed_owner_guid: self.public_key.read() });
+            self._set_public_key(new_public_key);
+        }
+    }
+
+    #[external(v0)]
+    impl PublicKeyCamelImpl of super::PublicKeyCamelTrait<ContractState> {
+        fn getPublicKey(self: @ContractState) -> felt252 {
+            self.public_key.read()
+        }
+
+        fn setPublicKey(ref self: ContractState, newPublicKey: felt252) {
+            PublicKeyImpl::set_public_key(ref self, newPublicKey);
+        }
+    }
+
+    #[external(v0)]
+    fn __validate_deploy__(
+        self: @ContractState,
+        class_hash: felt252,
+        contract_address_salt: felt252,
+        _public_key: felt252
+    ) -> felt252 {
+        self.validate_transaction()
+    }
+
+    //
+    // Internal
+    //
+
     #[generate_trait]
-    impl AccountInternalImpl of AccountInternal {
-        fn only_protocol(self: @ContractState) {
-            let sender = get_caller_address();
-            assert(sender.is_zero(), AccountError::INVALID_CALLER);
+    impl InternalImpl of InternalTrait {
+        fn initializer(ref self: ContractState, _public_key: felt252) {
+            let mut unsafe_state = SRC5::unsafe_new_contract_state();
+            SRC5::InternalImpl::register_interface(ref unsafe_state, interface::ISRC6_ID);
+            self._set_public_key(_public_key);
         }
 
         fn validate_transaction(self: @ContractState) -> felt252 {
             let tx_info = get_tx_info().unbox();
             let tx_hash = tx_info.transaction_hash;
             let signature = tx_info.signature;
-
-            let is_valid = self.is_valid_signature_internal(tx_hash, signature);
-            assert(is_valid, AccountError::INVALID_SIGNATURE);
-
-            VALIDATED
+            assert(self._is_valid_signature(tx_hash, signature), AccountError::INVALID_SIGNATURE);
+            starknet::VALIDATED
         }
 
-        fn is_valid_signature_internal(
+        fn _set_public_key(ref self: ContractState, new_public_key: felt252) {
+            self.public_key.write(new_public_key);
+            self.emit(OwnerAdded { new_owner_guid: new_public_key });
+        }
+
+        fn _is_valid_signature(
             self: @ContractState, hash: felt252, signature: Span<felt252>
         ) -> bool {
-            if signature.len() != 2_u32 {
-                return false;
+            let valid_length = signature.len() == 2_u32;
+
+            if valid_length {
+                check_ecdsa_signature(
+                    hash, self.public_key.read(), *signature.at(0_u32), *signature.at(1_u32)
+                )
+            } else {
+                false
             }
-
-            // Verify ECDSA signature
-            check_ecdsa_signature(
-                message_hash: hash,
-                public_key: self.public_key.read(),
-                signature_r: *signature[0_u32],
-                signature_s: *signature[1_u32]
-            )
         }
+    }
 
-        fn execute_single_call(self: @ContractState, call: Call) -> Span<felt252> {
-            let Call{to, selector, calldata } = call;
-            call_contract_syscall(to, selector, calldata.span()).unwrap()
-        }
+    #[internal]
+    fn assert_only_self() {
+        let caller = get_caller_address();
+        let self = get_contract_address();
+        assert(self == caller, AccountError::UNAUTHORIZED);
+    }
 
-        fn execute_multiple_calls(
-            self: @ContractState, mut calls: Array<Call>
-        ) -> Array<Span<felt252>> {
-            let mut res = ArrayTrait::new();
-            loop {
-                match calls.pop_front() {
-                    Option::Some(call) => {
-                        let _res = self.execute_single_call(call);
-                        res.append(_res);
-                    },
-                    Option::None(_) => {
-                        break ();
-                    },
-                };
+    #[internal]
+    fn _execute_calls(mut calls: Array<Call>) -> Array<Span<felt252>> {
+        let mut res = ArrayTrait::new();
+        loop {
+            match calls.pop_front() {
+                Option::Some(call) => {
+                    let _res = _execute_single_call(call);
+                    res.append(_res);
+                },
+                Option::None(_) => {
+                    break ();
+                },
             };
-            res
-        }
+        };
+        res
+    }
+
+    #[internal]
+    fn _execute_single_call(call: Call) -> Span<felt252> {
+        let Call{to, selector, calldata } = call;
+        starknet::call_contract_syscall(to, selector, calldata.span()).unwrap()
     }
 }
