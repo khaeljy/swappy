@@ -31,6 +31,7 @@ trait PublicKeyCamelTrait<TState> {
 }
 
 trait PositionTrait<TState> {
+    fn get_last_id(self: @TState) -> u32;
     fn get_position(self: @TState, id:u32) -> Position;
     fn add_position(ref self: TState, from: ContractAddress, to: ContractAddress, amount: u256, period: u256);
     fn pause_position(ref self: TState, id: u32);
@@ -191,6 +192,10 @@ mod Account {
 
     #[external(v0)]
     impl PositionTraitImpl of super::PositionTrait<ContractState> {
+        fn get_last_id(self: @ContractState) -> u32 {
+            self.last_id.read()
+        }
+
         fn get_position(self: @ContractState, id:u32) -> Position {
             let last_id = self.last_id.read();
             assert(id <= last_id, AccountError::POSITION_NOT_FOUND);
@@ -228,7 +233,7 @@ mod Account {
         fn resume_position(ref self: ContractState, id: u32) {
             let last_id = self.last_id.read();
             assert(id <= last_id, AccountError::POSITION_NOT_FOUND);
-            
+
             self.pause.write(id, false);
         }
     }
