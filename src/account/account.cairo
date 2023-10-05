@@ -10,6 +10,16 @@ const TRANSACTION_VERSION: felt252 = 1;
 // 2**128 + TRANSACTION_VERSION
 const QUERY_VERSION: felt252 = 340282366920938463463374607431768211457;
 
+#[derive(Drop, Copy, Serde)]
+struct Position {
+    from: ContractAddress,
+    to: ContractAddress,
+    amount: u256,
+    period: u256,
+    last_swap: u256,
+    pause: bool
+}
+
 trait PublicKeyTrait<TState> {
     fn set_public_key(ref self: TState, new_public_key: felt252);
     fn get_public_key(self: @TState) -> felt252;
@@ -18,6 +28,13 @@ trait PublicKeyTrait<TState> {
 trait PublicKeyCamelTrait<TState> {
     fn setPublicKey(ref self: TState, newPublicKey: felt252);
     fn getPublicKey(self: @TState) -> felt252;
+}
+
+trait PositionTrait<TState> {
+    fn get_position(self: @TState, id:u32) -> Position;
+    fn add_position(ref self: TState, from: ContractAddress, to: ContractAddress, amount: u256, period: u256);
+    fn pause_position(ref self: TState, id: u32);
+    fn resume_position(ref self: TState, id: u32);
 }
 
 #[starknet::contract]
@@ -35,17 +52,27 @@ mod Account {
     use starknet::get_caller_address;
     use starknet::get_contract_address;
     use starknet::get_tx_info;
+    use starknet::get_block_timestamp;
+    use starknet::contract_address::ContractAddress;
 
     use super::Call;
     use super::QUERY_VERSION;
     use super::TRANSACTION_VERSION;
+    use super::Position;
     use zeroable::Zeroable;
 
     use swappy::account::error::AccountError;
 
     #[storage]
     struct Storage {
-        public_key: felt252
+        public_key: felt252,
+        last_id: u32,
+        from: LegacyMap<u32, ContractAddress>,
+        to: LegacyMap<u32, ContractAddress>,
+        amount: LegacyMap<u32, u256>,
+        period: LegacyMap<u32, u256>,
+        last_swap: LegacyMap<u32, u256>,
+        pause: LegacyMap<u32, bool>
     }
 
     #[event]
@@ -161,6 +188,51 @@ mod Account {
             PublicKeyImpl::set_public_key(ref self, newPublicKey);
         }
     }
+
+    #[external(v0)]
+    impl PositionTraitImpl of super::PositionTrait<ContractState> {
+        fn get_position(self: @ContractState, id:u32) -> Position {
+            let last_id = self.last_id.read();
+            assert(id <= last_id, AccountError::POSITION_NOT_FOUND);
+
+            Position {
+                from: self.from.read(id),
+                to: self.to.read(id),
+                amount: self.amount.read(id),
+                period: self.period.read(id),
+                last_swap: self.last_swap.read(id),
+                pause: self.pause.read(id)
+            }
+        }
+
+        fn add_position(ref self: ContractState, from: ContractAddress, to: ContractAddress, amount: u256, period: u256) {
+            let new_id = self.last_id.read() + 1;
+
+            self.from.write(new_id, from);
+            self.to.write(new_id, to);
+            self.amount.write(new_id, amount);
+            self.period.write(new_id, period);
+            self.last_swap.write(new_id, 0);
+            self.pause.write(new_id, false);
+
+            self.last_id.write(new_id);
+        }
+
+        fn pause_position(ref self: ContractState, id: u32) {
+            let last_id = self.last_id.read();
+            assert(id <= last_id, AccountError::POSITION_NOT_FOUND);
+
+            self.pause.write(id, true);
+        }
+
+        fn resume_position(ref self: ContractState, id: u32) {
+            let last_id = self.last_id.read();
+            assert(id <= last_id, AccountError::POSITION_NOT_FOUND);
+            
+            self.pause.write(id, false);
+        }
+    }
+    
 
     #[external(v0)]
     fn __validate_deploy__(
