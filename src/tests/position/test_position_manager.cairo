@@ -81,6 +81,44 @@ fn test_pause_position() {
 
 #[test]
 #[available_gas(2000000000)]
+#[should_panic(expected: ('Position: not authorized', 'ENTRYPOINT_FAILED',))]
+fn test_pause_position_should_fail() {
+    // Given
+    let owner = contract_address_const::<'OWNER'>();
+    let contract = deploy(owner);
+    set_contract_address(owner);
+
+    // When
+    let position_id = contract
+        .create_position(
+            contract_address_const::<'FROM_TOKEN'>(), contract_address_const::<'TO_TOKEN'>(), 1, 60
+        );
+
+    set_contract_address(contract_address_const::<'OTHER'>());
+    contract.pause_position(position_id);
+}
+
+#[test]
+#[available_gas(2000000000)]
+#[should_panic(expected: ('Position: not authorized', 'ENTRYPOINT_FAILED',))]
+fn test_resume_position_should_fail() {
+    // Given
+    let owner = contract_address_const::<'OWNER'>();
+    let contract = deploy(owner);
+    set_contract_address(owner);
+
+    // When
+    let position_id = contract
+        .create_position(
+            contract_address_const::<'FROM_TOKEN'>(), contract_address_const::<'TO_TOKEN'>(), 1, 60
+        );
+
+    set_contract_address(contract_address_const::<'OTHER'>());
+    contract.resume_position(position_id);
+}
+
+#[test]
+#[available_gas(2000000000)]
 fn test_pause_then_resume_position() {
     // Given
     let owner = contract_address_const::<'OWNER'>();

@@ -34,7 +34,6 @@ mod PositionManager {
     use swappy::position::error::PositionError;
     use super::Position;
 
-
     #[storage]
     struct Storage {
         last_id: u32,
@@ -107,12 +106,18 @@ mod PositionManager {
             let last_id = self.last_id.read();
             assert(id <= last_id, PositionError::POSITION_NOT_FOUND);
 
+            let owner = self.owner.read(id);
+            assert(owner == starknet::get_caller_address(), PositionError::NOT_AUTHORIZED);
+
             self.pause.write(id, true);
         }
 
         fn resume_position(ref self: ContractState, id: u32) {
             let last_id = self.last_id.read();
             assert(id <= last_id, PositionError::POSITION_NOT_FOUND);
+
+            let owner = self.owner.read(id);
+            assert(owner == starknet::get_caller_address(), PositionError::NOT_AUTHORIZED);
 
             self.pause.write(id, false);
         }
