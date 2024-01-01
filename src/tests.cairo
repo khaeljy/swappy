@@ -1,5 +1,14 @@
 #[cfg(test)]
-mod test_account;
+mod account {
+    #[cfg(test)]
+    mod test_account;
+}
+
+#[cfg(test)]
+mod position {
+    #[cfg(test)]
+    mod test_position_manager;
+}
 
 #[cfg(test)]
 mod router {

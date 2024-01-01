@@ -1,13 +1,17 @@
-use starknet::deploy_syscall;
+use core::traits::Into;
+use starknet::{
+    deploy_syscall, get_contract_address, get_caller_address, ContractAddress,
+    contract_address_const
+};
+use starknet::testing::{set_caller_address, set_contract_address, set_account_contract_address};
 use openzeppelin::account::{AccountABIDispatcher, AccountABIDispatcherTrait};
 
 use swappy::account::account::Account;
 
-// Deploy the contract and return its dispatcher.
-fn deploy(public_key: felt252) -> AccountABIDispatcher {
-    // Set up constructor arguments.
+fn deploy(owner: ContractAddress) -> AccountABIDispatcher {
+    // Set up constructor arguments.AccountABIDispatcher
     let mut calldata = ArrayTrait::new();
-    public_key.serialize(ref calldata);
+    owner.serialize(ref calldata);
 
     // Declare and deploy
     let (contract_address, _) = deploy_syscall(
@@ -24,11 +28,10 @@ fn deploy(public_key: felt252) -> AccountABIDispatcher {
 #[available_gas(2000000000)]
 fn test_deploy() {
     // Given
-    let public_key: felt252 = 'test';
+    let owner = contract_address_const::<'OWNER'>();
 
     // When
-    let contract = deploy(public_key);
-
+    let contract = deploy(owner);
     // Then
-    assert(contract.get_public_key() == public_key, 'wrong public key');
+    assert(contract.get_public_key() == owner.into(), 'wrong public key');
 }

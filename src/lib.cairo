@@ -3,6 +3,11 @@ mod account {
     mod error;
 }
 
+mod position {
+    mod position_manager;
+    mod error;
+}
+
 mod router {
     mod router;
     mod error;
