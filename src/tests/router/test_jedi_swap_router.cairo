@@ -66,8 +66,9 @@ fn test_set_router_address_by_owner() {
     let contract = deploy(owner);
     set_contract_address(owner);
 
-    let router_address =
-        contract_address_const::<0x02bcc885342ebbcbcd170ae6cafa8a4bed22bb993479f49806e72d96af94c965>();
+    let router_address = contract_address_const::<
+        0x02bcc885342ebbcbcd170ae6cafa8a4bed22bb993479f49806e72d96af94c965
+    >();
 
     // When
     contract.set_router_address(router_address);
@@ -85,8 +86,9 @@ fn test_set_router_address_by_non_owner_should_fail() {
     let contract = deploy(owner);
     set_contract_address(contract_address_const::<99999>());
 
-    let router_address =
-        contract_address_const::<0x02bcc885342ebbcbcd170ae6cafa8a4bed22bb993479f49806e72d96af94c965>();
+    let router_address = contract_address_const::<
+        0x02bcc885342ebbcbcd170ae6cafa8a4bed22bb993479f49806e72d96af94c965
+    >();
 
     // When
     contract.set_router_address(router_address);
@@ -117,8 +119,9 @@ fn test_swap_exact_tokens_for_tokens() {
     let contract = deploy(owner);
     set_contract_address(owner);
 
-    let router_address =
-        contract_address_const::<0x02bcc885342ebbcbcd170ae6cafa8a4bed22bb993479f49806e72d96af94c965>();
+    let router_address = contract_address_const::<
+        0x02bcc885342ebbcbcd170ae6cafa8a4bed22bb993479f49806e72d96af94c965
+    >();
     contract.set_router_address(router_address);
 
     // When
