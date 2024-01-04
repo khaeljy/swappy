@@ -7,6 +7,8 @@ mod Account {
     use starknet::account::Call;
     use starknet::{get_tx_info, ContractAddress, contract_address_const};
 
+    use swappy::account::error::AccountError;
+
     component!(path: AccountComponent, storage: account, event: AccountEvent);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
 
@@ -68,14 +70,13 @@ mod Account {
             loop {
                 match calls.pop_front() {
                     Option::Some(call) => {
-
                         // TODO: Add whitelist for contracts allowed and selectors
                         assert(
                             call
                                 .to == contract_address_const::<
                                     0x0097ab8a6dc7760a687caaffa7101611b20babda533ce40b3cac94fb1926355e
                                 >(),
-                            'UNAUTHORIZED CONTRACT'
+                            AccountError::UNAUTHORIZED_CONTRACT
                         );
                     },
                     Option::None(_) => { break (); },
