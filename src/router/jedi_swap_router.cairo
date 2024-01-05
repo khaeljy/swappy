@@ -1,3 +1,18 @@
+use starknet::{get_caller_address, ContractAddress};
+
+
+#[starknet::interface]
+trait IJediSwapRouter<ContractState> {
+    fn swap_exact_tokens_for_tokens(
+        ref self: ContractState,
+        amount_in: u256,
+        amount_out_min: u256,
+        path: Span<ContractAddress>,
+        to: ContractAddress,
+        deadline: u32
+    );
+}
+
 #[starknet::contract]
 mod JediSwapRouter {
     // *************************************************************************
@@ -5,6 +20,7 @@ mod JediSwapRouter {
     // *************************************************************************
 
     // Core lib imports.
+    use swappy::router::jedi_swap_router::IJediSwapRouterDispatcherTrait;
     use core::zeroable::Zeroable;
     use starknet::{get_caller_address, ContractAddress};
 
@@ -98,6 +114,8 @@ mod JediSwapRouter {
             let router_address = self.router_address.read();
             assert(router_address.is_non_zero(), RouterError::ROUTER_ADDRESS_UNDEFINED);
 
+            // super::IJediSwapRouterDispatcher { contract_address: router_address }
+            //     .swap_exact_tokens_for_tokens(amount_in, amount_out_min, path, to, deadline);
             // TODO : Call router address swap_exact_tokens_for_tokens
             // Until JediSwap is updated to Cairo 1, panic with 'NOT_IMPLEMENTED'
             panic_with_felt252('NOT_IMPLEMENTED');

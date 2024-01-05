@@ -7,8 +7,11 @@ use starknet::testing::{set_caller_address, set_contract_address, set_account_co
 use openzeppelin::account::{AccountABIDispatcher, AccountABIDispatcherTrait};
 
 use swappy::account::account::Account;
+use swappy::account::account::{ISwappyAccountDispatcher, ISwappyAccountDispatcherTrait};
 
-fn deploy(owner: ContractAddress) -> AccountABIDispatcher {
+use debug::PrintTrait;
+
+fn deploy(owner: ContractAddress) -> ContractAddress {
     // Set up constructor arguments.AccountABIDispatcher
     let mut calldata = ArrayTrait::new();
     owner.serialize(ref calldata);
@@ -19,9 +22,7 @@ fn deploy(owner: ContractAddress) -> AccountABIDispatcher {
     )
         .unwrap();
 
-    // Return the dispatcher.
-    // The dispatcher allows to interact with the contract based on its interface.
-    AccountABIDispatcher { contract_address }
+    contract_address
 }
 
 #[test]
@@ -31,7 +32,29 @@ fn test_deploy() {
     let owner = contract_address_const::<'OWNER'>();
 
     // When
-    let contract = deploy(owner);
+    let account_address = deploy(owner);
+    let account = AccountABIDispatcher { contract_address: account_address };
+
     // Then
-    assert(contract.get_public_key() == owner.into(), 'wrong public key');
+    assert(account.get_public_key() == owner.into(), 'wrong public key');
 }
+// #[test]
+// #[available_gas(2000000000)]
+// fn test_add_keeper() {
+//     // Given
+//     let owner = contract_address_const::<'OWNER'>();
+//     set_contract_address(owner);
+//     set_caller_address(owner);
+
+//     // When
+//     let account_address = deploy(owner);
+//     let swappy_account = ISwappyAccountDispatcher { contract_address: account_address };
+//     let account = AccountABIDispatcher { contract_address: account_address };
+//     account.get_public_key().print();
+//     swappy_account.add_keeper('KEEPER');
+
+//     // Then
+//     assert(swappy_account.is_valid_keeper('KEEPER') == true, 'keeper is not valid');
+// }
+
+
